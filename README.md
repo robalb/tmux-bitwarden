@@ -1,4 +1,4 @@
-# tmux-1password
+# tmux-bitwarden
 
 > This is a fork of [tmux-1password](https://github.com/yardnsm/tmux-1password/), adapted for Bitwarden.
 > Access your Bitwarden login items within tmux!
