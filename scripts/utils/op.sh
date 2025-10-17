@@ -22,28 +22,23 @@ op::verify_version() {
   return 0
 }
 
-op::verify_session() {
-  # To determine if we need to unlock the vault, we perform a query for
-  # an item that does't exist, and check the stout for password prompts
-  local test_query="$(echo "" | bw get item tmux-bw-probe --session $(op::get_session) 2>&1)"
-  local password=""
+op::verify_logged_from_raw() {
+  local test_query="$1"
 
   if [[ $test_query == *"Master Password is required"* ]]; then
-
-    echo "Bitwarden vault needs to be unlocked."
-    printf "\\e[0;33m[?]\\e[0m Master Password: "
-    read -r -s password
-    echo -ne "\n"
-
-    if ! op::unlock "$password"; then
-      return 1
-    fi
+    return 1
   fi
-
 }
 
+
 op::unlock() {
-  local password="$1"
+  local password=""
+
+  echo "Bitwarden vault needs to be unlocked."
+  printf "\\e[0;33m[?]\\e[0m Master Password: "
+  read -r -s password
+  echo -ne "\n"
+
   local unlock_out="$(echo "$password" | bw unlock 2>&1)"
 
   if [[ $unlock_out == *"Invalid master password"* ]]; then
@@ -85,7 +80,8 @@ op::get_session() {
   fi
 }
 
-op::get_all_items() {
+op::parse_items_from_raw() {
+  local items_raw="$1"
   # Returned JSON structure reference:
   # [
   # {
@@ -127,14 +123,19 @@ op::get_all_items() {
   | [(.name + \" (\" + .login.username + \")\"), .id]
   | join(\",\")
   "
-
   # bitwarden: if empty, folderid filter is ignored
-  bw list items "$ITEM_UUID" \
+  echo "$items_raw" | jq "$JQ_FILTER" --raw-output
+
+}
+
+
+op::get_items_raw() {
+  # returns either the text for a login prompt,
+  # or a json with all password items.
+  echo "" | bw list items \
     --folderid "$(options::op_filter_tags)" \
     --session "$(op::get_session)" \
-    2> /dev/null \
-    | jq "$JQ_FILTER" --raw-output
-
+    2>&1
 }
 
 op::get_item_password() {

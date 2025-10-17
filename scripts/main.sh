@@ -38,15 +38,26 @@ main() {
       return 0
   fi
 
-  # Verify current session
-  if ! op::verify_session; then
-    tmux::display_message "Bitwarden CLI unlock has failed"
-    return 0
+  spinner::start "Fetching items"
+  items_raw="$(op::get_items_raw)"
+  spinner::stop
+
+
+  if ! op::verify_logged_from_raw "$items_raw"; then
+
+    if ! op::unlock; then
+      tmux::display_message "Bitwarden CLI unlock has failed"
+      return 0
+    fi
+
+    spinner::start "Fetching items"
+    items_raw="$(op::get_items_raw)"
+    spinner::stop
+
   fi
 
-  spinner::start "Fetching items"
-  items="$(op::get_all_items)"
-  spinner::stop
+  local -r items="$(op::parse_items_from_raw "$items_raw" )"
+
 
   synchronize_panes_reset_value=$(tmux::disable_synchronize_panes)
 
