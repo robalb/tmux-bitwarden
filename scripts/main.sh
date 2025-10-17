@@ -40,7 +40,7 @@ main() {
 
   # Verify current session
   if ! op::verify_session; then
-    tmux::display_message "1Password CLI signin has failed"
+    tmux::display_message "Bitwarden CLI unlock has failed"
     return 0
   fi
 

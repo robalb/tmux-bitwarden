@@ -2,19 +2,19 @@
 
 # ------------------------------------------------------------------------------
 
-declare -r EXPECTED_MIN_OP_CLI_VERSION="2.0.0"
+declare -r EXPECTED_MIN_OP_CLI_VERSION="2025.9.0"
 declare -r TMP_TOKEN_FILE="$HOME/.op_tmux_token_tmp"
 
 # ------------------------------------------------------------------------------
 
 op::verify_version() {
-  local op_version="$(op --version)"
+  local op_version="$(bw --version)"
 
   semver::compare "$op_version" "$EXPECTED_MIN_OP_CLI_VERSION"
 
   if [[ $? -eq 2 ]]; then
     tmux::display_message \
-      "1Password CLI version is not compatible with this plugin: ${op_version} < ${EXPECTED_MIN_OP_CLI_VERSION}"
+      "Bitwarden CLI version is not compatible with this plugin: ${op_version} < ${EXPECTED_MIN_OP_CLI_VERSION}"
 
     return 1
   fi
@@ -23,43 +23,56 @@ op::verify_version() {
 }
 
 op::verify_session() {
-  local connected_accounts_count="$(( $(op account list | wc -l) - 1 ))"
+  # To determine if we need to unlock the vault, we perform a query for
+  # an item that does't exist, and check the stout for password prompts
+  local test_query="$(echo "" | bw get item tmux-bw-probe --session $(op::get_session) 2>&1)"
+  local password=""
 
-  if [[ "$connected_accounts_count" -le 0 ]]; then
-    prompt::ask "You haven't added any accounts to 1Password CLI. Would you like to add one now?"
+  if [[ $test_query == *"Master Password is required"* ]]; then
 
-    if prompt::answer_is_yes; then
-      op account add
+    echo "Bitwarden vault needs to be unlocked."
+    printf "\\e[0;33m[?]\\e[0m Master Password: "
+    read -r -s password
+    echo -ne "\n"
 
-      if [[ $? -ne 0 ]]; then
-        return 1
-      fi
-
-      tput clear
-      tmux::display_message "Successfully added new account."
-    else
+    if ! op::unlock "$password"; then
       return 1
     fi
   fi
 
-  if ! op::signin; then
-    return 1
-  fi
 }
 
-op::signin() {
-  op signin \
-    --cache \
-    --force \
-    --raw \
-    --account="$(options::op_account)" \
-    --session="$(op::get_session)" > "$TMP_TOKEN_FILE"
+op::unlock() {
+  local password="$1"
+  local unlock_out="$(echo "$password" | bw unlock 2>&1)"
+
+  if [[ $unlock_out == *"Invalid master password"* ]]; then
+    echo "Invalid master password."
+    return 1
+  fi
+
+  # Extract the temporary auth token from the bitwarden cli stdout.
+  # The token is usually in the text ... BW_SESSION="<TOKEN>" ...
+  local tmp_token="$(echo "$unlock_out" | grep -m 1 -oP 'BW_SESSION="\K[^"]*')"
+
+  if [ ${#tmp_token} -lt 10 ]; then
+    echo "Could not parse bitwarden output."
+    return 1
+  fi
+
+  op::store_session "$tmp_token"
 
   exit_code=$?
 
   tput clear
 
   return $exit_code
+}
+
+
+op::store_session() {
+  local tmp_token="$1"
+  echo "$tmp_token" > "$TMP_TOKEN_FILE"
 }
 
 op::get_session() {
