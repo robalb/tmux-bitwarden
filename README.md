@@ -1,11 +1,7 @@
 # tmux-1password
 
-[![Build Status](https://github.com/yardnsm/tmux-1password/workflows/main/badge.svg)](https://github.com/yardnsm/tmux-1password/actions)
-
-> This is a fork of [tmux-1password](https://github.com/yardnsm/tmux-1password/), but for Bitwarden.
+> This is a fork of [tmux-1password](https://github.com/yardnsm/tmux-1password/), adapted for Bitwarden.
 > Access your Bitwarden login items within tmux!
-
-https://user-images.githubusercontent.com/11786506/159118616-9983fca2-edb5-4d0b-b827-43088e84d2c8.mp4
 
 This plugin allows you to access your Bitwarden items within tmux.
 It works with both
