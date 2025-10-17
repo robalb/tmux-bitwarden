@@ -2,18 +2,25 @@
 
 [![Build Status](https://github.com/yardnsm/tmux-1password/workflows/main/badge.svg)](https://github.com/yardnsm/tmux-1password/actions)
 
-> Access your 1Password login items within tmux!
+> This is a fork of [tmux-1password](https://github.com/yardnsm/tmux-1password/), but for Bitwarden.
+> Access your Bitwarden login items within tmux!
 
 https://user-images.githubusercontent.com/11786506/159118616-9983fca2-edb5-4d0b-b827-43088e84d2c8.mp4
 
-This plugin allows you to access you 1Password items within tmux, using 1Password's CLI. It works
-for personal 1Password accounts, as well as teams accounts.
+This plugin allows you to access your Bitwarden items within tmux.
+It works with both
+- The official [Bitwarden CLI](https://bitwarden.com/help/cli/)
+- [rbw](https://github.com/doy/rbw) - an unofficial and feature-complete Bitwarden CLI
+
+rbw is recommended over the official CLI for a good user experience:
+The official CLI does not properly sync items, and takes several seconds to load.
 
 ## Requirements
 
 This plugin relies on the following:
 
-- [1Password CLI](https://developer.1password.com/docs/cli) >= 2.0.0
+- [Bitwarden CLI](https://developer.1password.com/docs/cli) >= 2.0.0
+- as an alternative to bitwarden CLI: [rbw](https://github.com/doy/rbw) >= 1.14.1
 - [fzf](https://github.com/junegunn/fzf)
 - [jq](https://stedolan.github.io/jq/)
 
