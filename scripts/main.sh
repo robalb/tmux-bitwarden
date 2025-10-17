@@ -27,10 +27,12 @@ main() {
   local selected_item_password
   local synchronize_panes_reset_value
 
+  #TODO(al) Add folder filter. Show folder name in border label if folder filter is active.
   local -ra fzf_opts=(
     --no-multi
     --border
-    --border-label="BITWARDEN CLI"
+    --ansi
+    --border-label=" | $(tput setaf 4)bitwarden$(tput sgr0) | all items | " \
     --border=top
     "--header=enter=password,ctrl-u=totp"
     "--expect=enter,ctrl-u"
