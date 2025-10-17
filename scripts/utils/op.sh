@@ -76,90 +76,79 @@ op::store_session() {
 }
 
 op::get_session() {
-  cat "$TMP_TOKEN_FILE" 2> /dev/null
+  local token="$(cat "$TMP_TOKEN_FILE" 2> /dev/null )"
+
+  if [ ${#token} -lt 10 ]; then
+    echo "token_error"
+  else
+    echo "$token"
+  fi
 }
 
 op::get_all_items() {
-
   # Returned JSON structure reference:
-  # https://developer.1password.com/docs/cli/item-template-json
+  # [
+  # {
+  #   "passwordHistory": [],
+  #   "revisionDate": "2025-06-17T09:27:44.514Z",
+  #   "creationDate": "2025-06-17T09:26:29.696Z",
+  #   "deletedDate": null,
+  #   "object": "item",
+  #   "id": "5071a732-6457-4235-a4f0-c0171664a329",
+  #   "organizationId": null,
+  #   "folderId": null,
+  #   "type": 1,
+  #   "reprompt": 0,
+  #   "name": "example.com name1",
+  #   "notes": null,
+  #   "favorite": false,
+  #   "fields": [],
+  #   "login": {
+  #     "uris": [
+  #       {
+  #         "match": null,
+  #         "uri": "https://example.com"
+  #       }
+  #     ],
+  #     "username": "admin@example.com",
+  #     "password": "password",
+  #     "totp": null,
+  #     "passwordRevisionDate": null
+  #   },
+  #   "collectionIds": [],
+  #   "attachments": []
+  # },
+  #  ...
+  # ]
 
   local -r JQ_FILTER="
-    .[]
-    | [
-        select(
-          (.category == \"LOGIN\") or
-          (.category == \"PASSWORD\")
-        )?
-      ]
-    | map(
-        [ .title, .id ]
-        | join(\",\")
-      )
-    | .[]
+  .[]
+  | select(.object == \"item\")
+  | [(.name + \" (\" + .login.username + \")\"), .id]
+  | join(\",\")
   "
 
-  op item list \
-    --cache \
-    --format json \
-    --categories="LOGIN,PASSWORD" \
-    --tags="$(options::op_filter_tags)" \
-    --vault="$(options::op_valut)" \
-    --session="$(op::get_session)" \
+  # bitwarden: if empty, folderid filter is ignored
+  bw list items "$ITEM_UUID" \
+    --folderid "$(options::op_filter_tags)" \
+    --session "$(op::get_session)" \
     2> /dev/null \
     | jq "$JQ_FILTER" --raw-output
+
 }
 
 op::get_item_password() {
   local -r ITEM_UUID="$1"
 
-  # Returned JSON structure reference:
-  # https://developer.1password.com/docs/cli/item-template-json
-  #
-  # In case there are multiple items, we'll take the first one that matches our criteria.
-
-  local -r JQ_FILTER="
-      # For cases where we might get a single item - we always want to start with an array
-      [.] + [] | flatten
-
-      # Select the items whose purpose is... being a password
-      | map(select(.purpose == \"PASSWORD\"))
-
-      # Select the first one
-      | .[0]
-
-      # Return the value
-      | .value
-    "
-
-  op item get "$ITEM_UUID" \
-    --cache \
-    --fields type=concealed \
-    --format json \
-    --session="$(op::get_session)" \
-    | jq "$JQ_FILTER" --raw-output
+  bw get password "$ITEM_UUID" \
+    --session "$(op::get_session)" \
+    2> /dev/null
 }
 
 op::get_item_totp() {
   local -r ITEM_UUID="$1"
 
-  # In this case, the structure looks very similar to the password section, but the type of "OTP".
-
-  local -r JQ_FILTER="
-      # For cases where we might get a single item - we always want to start with an array
-      [.] + [] | flatten
-
-      # Select the first one
-      | .[0]
-
-      # Return the value
-      | .totp
-    "
-
-  op item get "$ITEM_UUID" \
-    --cache \
-    --fields type=otp \
-    --format json \
-    --session="$(op::get_session)" \
-    | jq "$JQ_FILTER" --raw-output
+  bw get totp "$ITEM_UUID" \
+    --session "$(op::get_session)" \
+    2> /dev/null
 }
