@@ -29,6 +29,9 @@ main() {
 
   local -ra fzf_opts=(
     --no-multi
+    --border
+    --border-label="BITWARDEN CLI"
+    --border=top
     "--header=enter=password,ctrl-u=totp"
     "--expect=enter,ctrl-u"
   )
@@ -39,25 +42,8 @@ main() {
   fi
 
   spinner::start "Fetching items"
-  items_raw="$(op::get_items_raw)"
+  items="$(op::get_items)"
   spinner::stop
-
-
-  if ! op::verify_logged_from_raw "$items_raw"; then
-
-    if ! op::unlock; then
-      tmux::display_message "Bitwarden CLI unlock has failed"
-      return 0
-    fi
-
-    spinner::start "Fetching items"
-    items_raw="$(op::get_items_raw)"
-    spinner::stop
-
-  fi
-
-  local -r items="$(op::parse_items_from_raw "$items_raw" )"
-
 
   synchronize_panes_reset_value=$(tmux::disable_synchronize_panes)
 
